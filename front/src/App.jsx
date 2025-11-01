@@ -17,63 +17,45 @@ import Header from "./components/Header.jsx";
    If not set, Refresh just re-reads from Supabase (no POST). */
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
-/* ---------------- Helpers: Articles ---------------- */
-async function fetchArticlesTryBoth() {
+/* ---------------- Helpers: Articles (Supabase) ---------------- */
+async function fetchArticlesFromSupabase() {
   const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
 
-  for (const base of ["http://localhost:8000", "http://127.0.0.1:8000"]) {
-    try {
-      const res = await fetch(`${base}/articles`, { credentials: "omit" });
-      if (res.ok) {
-        const raw = await res.json();
-        const data = (raw || []).map((d) => ({
-          ...d,
-          id: d.Link || d.id,
-          Bookmarked: !!saved[d.Link || d.id],
-        }));
-        console.log(`[ENGIE] Loaded articles from backend: ${base}`);
-        return data;
-      } else {
-        console.warn(`[ENGIE] ${base}/articles responded ${res.status}`);
-      }
-    } catch (e) {
-      console.warn(`[ENGIE] fetch failed from ${base}/articles`, e);
-    }
-  }
-
-  // Fallback to local JSON
   try {
-    const res = await fetch("/articles.json");
-    const raw = await res.json();
-    const data = (raw || []).map((d) => ({
+    // Fetch directly from the 'news' table ordered by inserted_at (your actual timestamp column)
+    const { data, error } = await supabase
+      .from("news")
+      .select("*")
+      .order("inserted_at", { ascending: false });
+
+    if (error) throw error;
+
+    // Normalize and add bookmark info
+    return (data || []).map((d) => ({
       ...d,
-      id: d.Link,
-      Bookmarked: !!saved[d.Link],
+      id: d.Link || d.id,
+      Bookmarked: !!saved[d.Link || d.id],
     }));
-    console.log("[ENGIE] Loaded articles from local:/articles.json");
-    return data;
-  } catch (e) {
-    console.error("[ENGIE] Failed to load local /articles.json", e);
-    return [];
+  } catch (err) {
+    console.error("[ENGIE] Supabase articles fetch failed:", err?.message || err);
+
+    // Fallback: static JSON (local bundle)
+    try {
+      const res = await fetch("/articles.json");
+      const raw = await res.json();
+      console.log("[ENGIE] Loaded articles from local:/articles.json (fallback)");
+      return (raw || []).map((d) => ({
+        ...d,
+        id: d.Link,
+        Bookmarked: !!saved[d.Link],
+      }));
+    } catch (e) {
+      console.error("[ENGIE] Fallback /articles.json failed:", e);
+      return [];
+    }
   }
 }
 
-async function triggerRefreshTryBoth() {
-  for (const base of ["http://localhost:8000", "http://127.0.0.1:8000"]) {
-    try {
-      const res = await fetch(`${base}/refresh`, { method: "POST" });
-      if (res.ok) {
-        console.log(`[ENGIE] Refresh triggered via ${base}/refresh`);
-        return true;
-      } else {
-        console.warn(`[ENGIE] ${base}/refresh responded ${res.status}`);
-      }
-    } catch (e) {
-      console.warn(`[ENGIE] refresh failed via ${base}/refresh`, e);
-    }
-  }
-  return false;
-}
 
 /* ---------------- Helpers: Events (Supabase) ---------------- */
 async function fetchEventsFromSupabase() {
