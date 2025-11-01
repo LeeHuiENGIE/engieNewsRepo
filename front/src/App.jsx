@@ -1,5 +1,4 @@
 // front/src/App.jsx
-// front/src/App.jsx
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useSession } from "./auth/useSession";
@@ -12,99 +11,90 @@ import Bookmarks from "./pages/Bookmarks.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Header from "./components/Header.jsx";
 
-/* Optional admin ETL backend.
-   If set, Refresh will POST to it, and articles can fall back to it. */
+/* Optional admin ETL backend:
+   - If VITE_API_BASE is set, Refresh will POST to it.
+   - Articles will prefer backend first (same as your old local flow). */
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
-/* ------------ Helpers: Articles (Supabase first, backend fallback) ------------ */
-async function fetchArticlesSupabaseOnly() {
+/* ---------------- Articles: BACKEND → Supabase → local.json ---------------- */
+async function fetchArticlesBackendFirst() {
   const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
 
-  const run = async (orderCol) => {
-    let q = supabase.from("news").select("*");
-    if (orderCol) q = q.order(orderCol, { ascending: false });
-    const { data, error } = await q;
-    console.log("[ENGIE] news select", {
-      orderCol: orderCol || "(none)",
-      error: error?.message || null,
-      rows: data?.length ?? null,
-    });
-    if (error) throw error;
-    return (data || []).map((d) => ({
-      ...d,
-      id: d.Link || d.id,
-      Bookmarked: !!saved[d.Link || d.id],
-    }));
-  };
-
-  try {
-    let rows = await run("inserted_at");
-    if (!rows.length) {
-      rows = await run("published");
-    }
-    if (!rows.length) {
-      rows = await run(undefined);
-    }
-    return rows;
-  } catch (err) {
-    console.error("[ENGIE] Supabase articles fetch failed:", err?.message || err);
-    return [];
-  }
-}
-
-async function fetchArticlesBackendOnly() {
-  const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
-  try {
-    const res = await fetch(`${API_BASE}/articles`, { credentials: "omit" });
-    if (!res.ok) throw new Error(String(res.status));
-    const raw = await res.json();
-    console.log(`[ENGIE] Loaded articles from backend: ${API_BASE}`);
-    return (raw || []).map((d) => ({
-      ...d,
-      id: d.Link || d.id,
-      Bookmarked: !!saved[d.Link || d.id],
-    }));
-  } catch (e) {
-    console.warn("[ENGIE] backend /articles failed:", e?.message || e);
-    return [];
-  }
-}
-
-// Final hybrid used by the app
-async function fetchArticlesHybrid() {
-  // 1) Try Supabase directly
-  const a = await fetchArticlesSupabaseOnly();
-  if (a.length > 0) return a;
-
-  // 2) If empty and backend exists, fall back to backend (bypasses RLS)
+  // 1) Backend (bypasses RLS; mirrors your local working flow)
   if (API_BASE) {
-    const b = await fetchArticlesBackendOnly();
-    if (b.length > 0) return b;
+    try {
+      const r = await fetch(`${API_BASE}/articles`, { credentials: "omit" });
+      if (r.ok) {
+        const raw = await r.json();
+        console.log("[ENGIE] articles from backend", { count: raw?.length ?? 0 });
+        return (raw || []).map((d) => ({
+          ...d,
+          id: d.Link || d.id,
+          Bookmarked: !!saved[d.Link || d.id],
+        }));
+      } else {
+        console.warn("[ENGIE] backend /articles status", r.status);
+      }
+    } catch (e) {
+      console.warn("[ENGIE] backend /articles failed", e);
+    }
   }
 
-  // 3) Final fallback: bundled JSON (keeps UI populated)
+  // 2) Supabase direct (if backend not set or fails)
   try {
-    const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
+    const run = async (col) => {
+      let q = supabase.from("news").select("*");
+      if (col) q = q.order(col, { ascending: false });
+      const { data, error } = await q;
+      console.log("[ENGIE] news select", {
+        orderCol: col || "(none)",
+        error: error?.message || null,
+        rows: data?.length ?? null,
+      });
+      if (error) throw error;
+      return data || [];
+    };
+
+    let rows = await run("inserted_at");
+    if (!rows.length) rows = await run("published");
+    if (!rows.length) rows = await run(undefined);
+
+    if (rows.length) {
+      return rows.map((d) => ({
+        ...d,
+        id: d.Link || d.id,
+        Bookmarked: !!saved[d.Link || d.id],
+      }));
+    }
+  } catch (e) {
+    console.warn("[ENGIE] supabase news failed", e?.message || e);
+  }
+
+  // 3) Local bundle fallback
+  try {
     const res = await fetch("/articles.json");
     const raw = await res.json();
-    console.log("[ENGIE] Loaded articles from local:/articles.json (fallback)");
+    console.log("[ENGIE] articles from /articles.json", { count: raw?.length ?? 0 });
     return (raw || []).map((d) => ({
       ...d,
       id: d.Link,
       Bookmarked: !!saved[d.Link],
     }));
   } catch (e) {
-    console.error("[ENGIE] Fallback /articles.json failed:", e);
+    console.error("[ENGIE] /articles.json failed", e);
     return [];
   }
 }
 
-/* ---------------- Helpers: Events (direct from Supabase) ---------------- */
+/* ---------------- Events: straight from Supabase (server-side filter) ------- */
 async function fetchEventsFromSupabase() {
   try {
+    // Only upcoming events (today or later) so UI never shows “No upcoming…”
+    const today = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase
       .from("events")
       .select("*")
+      .gte("starts_on", today)
       .order("starts_on", { ascending: true });
 
     console.log("[ENGIE] events select", {
@@ -126,12 +116,12 @@ async function maybeTriggerNewsRefresh() {
   try {
     const res = await fetch(`${API_BASE}/refresh`, { method: "POST" });
     if (res.ok) {
-      console.log(`[ENGIE] Refresh triggered via ${API_BASE}/refresh`);
+      console.log("[ENGIE] refresh news OK");
       return true;
     }
-    console.warn(`[ENGIE] ${API_BASE}/refresh responded ${res.status}`);
+    console.warn("[ENGIE] refresh news status", res.status);
   } catch (e) {
-    console.warn(`[ENGIE] refresh failed via ${API_BASE}/refresh`, e);
+    console.warn("[ENGIE] refresh news failed", e);
   }
   return false;
 }
@@ -141,12 +131,12 @@ async function maybeTriggerEventsRefresh() {
   try {
     const res = await fetch(`${API_BASE}/refresh/events`, { method: "POST" });
     if (res.ok) {
-      console.log(`[ENGIE] Events refresh triggered via ${API_BASE}/refresh/events`);
+      console.log("[ENGIE] refresh events OK");
       return true;
     }
-    console.warn(`[ENGIE] ${API_BASE}/refresh/events responded ${res.status}`);
+    console.warn("[ENGIE] refresh events status", res.status);
   } catch (e) {
-    console.warn(`[ENGIE] refresh events failed via ${API_BASE}/refresh/events`, e);
+    console.warn("[ENGIE] refresh events failed", e);
   }
   return false;
 }
@@ -166,9 +156,10 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const [a, e] = await Promise.all([
-        fetchArticlesHybrid(),
+        fetchArticlesBackendFirst(),
         fetchEventsFromSupabase(),
       ]);
+      console.log("[ENGIE] loaded counts", { articles: a.length, events: e.length });
       setArticles(a);
       setEvents(e);
     })();
@@ -192,9 +183,10 @@ export default function App() {
       setRefreshing(true);
       await Promise.all([maybeTriggerNewsRefresh(), maybeTriggerEventsRefresh()]);
       const [a, e] = await Promise.all([
-        fetchArticlesHybrid(),
+        fetchArticlesBackendFirst(),
         fetchEventsFromSupabase(),
       ]);
+      console.log("[ENGIE] refreshed counts", { articles: a.length, events: e.length });
       setArticles(a);
       setEvents(e);
     } catch (err) {
