@@ -14,8 +14,8 @@ import Header from "./components/Header.jsx";
 /* Optional admin ETL backend:
    - If VITE_API_BASE is set, Refresh will POST to it.
    - Articles will prefer backend first (same as your old local flow). */
-const API_BASE  = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
-const API_TOKEN = import.meta.env.VITE_BACKEND_TOKEN || "";
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+const BACKEND_TOKEN = import.meta.env.VITE_BACKEND_TOKEN || "";
 console.log("[ENGIE] API_BASE =", API_BASE || "(none)");
 
 /* ---------------- Articles: BACKEND → Supabase → local.json ---------------- */
@@ -121,9 +121,7 @@ async function maybeTriggerNewsRefresh() {
   try {
     const res = await fetch(`${API_BASE}/refresh`, {
       method: "POST",
-      headers: authHeaders(),
-      credentials: "omit",
-      mode: "cors",
+      headers: { "x-backend-token": BACKEND_TOKEN },
     });
     if (res.ok) {
       console.log("[ENGIE] refresh news OK");
@@ -141,9 +139,7 @@ async function maybeTriggerEventsRefresh() {
   try {
     const res = await fetch(`${API_BASE}/refresh/events`, {
       method: "POST",
-      headers: authHeaders(),
-      credentials: "omit",
-      mode: "cors",
+      headers: { "x-backend-token": BACKEND_TOKEN },
     });
     if (res.ok) {
       console.log("[ENGIE] refresh events OK");
@@ -155,6 +151,7 @@ async function maybeTriggerEventsRefresh() {
   }
   return false;
 }
+
 
 /* ---------------- Main App ---------------- */
 export default function App() {
