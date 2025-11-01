@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useSession } from "./auth/useSession";
-import { supabase } from "./lib/supabaseClient"; // make sure this points to your actual file
+import { supabase } from "./lib/supabaseClient";
 
 // Pages
 import Login from "./pages/Login.jsx";
@@ -12,24 +12,12 @@ import Bookmarks from "./pages/Bookmarks.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Header from "./components/Header.jsx";
 
-/* ---------------- Optional admin ETL backend ----------------
-   If you set VITE_API_BASE, the Refresh button will call it.
-   If not set, Refresh just re-reads from Supabase (no POST). */
+/* Optional admin ETL backend.
+   If set, Refresh will POST to it, and articles can fall back to it. */
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
-/* ---------------- Helpers: Articles (Supabase) ---------------- */
-async function fetchArticlesFromSupabase() {
-
-  // quick RLS check: count-only request
-    const head = await supabase
-      .from("news")
-      .select("*", { count: "exact", head: true });
-
-    console.log("[ENGIE] news head count probe", {
-      error: head.error?.message || null,
-      count: head.count ?? null,
-    });
-
+/* ------------ Helpers: Articles (Supabase first, backend fallback) ------------ */
+async function fetchArticlesSupabaseOnly() {
   const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
 
   const run = async (orderCol) => {
@@ -42,50 +30,76 @@ async function fetchArticlesFromSupabase() {
       rows: data?.length ?? null,
     });
     if (error) throw error;
-    return data || [];
-  };
-
-  try {
-    let rows;
-    try {
-      rows = await run("inserted_at"); // main column in your DB
-      if (!rows.length) {
-        rows = await run("published"); // fallback if inserted_at is empty
-      }
-    } catch {
-      try {
-        rows = await run("published");
-      } catch {
-        rows = await run(undefined);
-      }
-    }
-
-    return rows.map((d) => ({
+    return (data || []).map((d) => ({
       ...d,
       id: d.Link || d.id,
       Bookmarked: !!saved[d.Link || d.id],
     }));
+  };
+
+  try {
+    let rows = await run("inserted_at");
+    if (!rows.length) {
+      rows = await run("published");
+    }
+    if (!rows.length) {
+      rows = await run(undefined);
+    }
+    return rows;
   } catch (err) {
     console.error("[ENGIE] Supabase articles fetch failed:", err?.message || err);
-
-    // fallback: local JSON
-    try {
-      const res = await fetch("/articles.json");
-      const raw = await res.json();
-      console.log("[ENGIE] Loaded articles from local:/articles.json (fallback)");
-      return (raw || []).map((d) => ({
-        ...d,
-        id: d.Link,
-        Bookmarked: !!saved[d.Link],
-      }));
-    } catch (e) {
-      console.error("[ENGIE] Fallback /articles.json failed:", e);
-      return [];
-    }
+    return [];
   }
 }
 
-/* ---------------- Helpers: Events (Supabase) ---------------- */
+async function fetchArticlesBackendOnly() {
+  const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
+  try {
+    const res = await fetch(`${API_BASE}/articles`, { credentials: "omit" });
+    if (!res.ok) throw new Error(String(res.status));
+    const raw = await res.json();
+    console.log(`[ENGIE] Loaded articles from backend: ${API_BASE}`);
+    return (raw || []).map((d) => ({
+      ...d,
+      id: d.Link || d.id,
+      Bookmarked: !!saved[d.Link || d.id],
+    }));
+  } catch (e) {
+    console.warn("[ENGIE] backend /articles failed:", e?.message || e);
+    return [];
+  }
+}
+
+// Final hybrid used by the app
+async function fetchArticlesHybrid() {
+  // 1) Try Supabase directly
+  const a = await fetchArticlesSupabaseOnly();
+  if (a.length > 0) return a;
+
+  // 2) If empty and backend exists, fall back to backend (bypasses RLS)
+  if (API_BASE) {
+    const b = await fetchArticlesBackendOnly();
+    if (b.length > 0) return b;
+  }
+
+  // 3) Final fallback: bundled JSON (keeps UI populated)
+  try {
+    const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
+    const res = await fetch("/articles.json");
+    const raw = await res.json();
+    console.log("[ENGIE] Loaded articles from local:/articles.json (fallback)");
+    return (raw || []).map((d) => ({
+      ...d,
+      id: d.Link,
+      Bookmarked: !!saved[d.Link],
+    }));
+  } catch (e) {
+    console.error("[ENGIE] Fallback /articles.json failed:", e);
+    return [];
+  }
+}
+
+/* ---------------- Helpers: Events (direct from Supabase) ---------------- */
 async function fetchEventsFromSupabase() {
   try {
     const { data, error } = await supabase
@@ -149,11 +163,10 @@ export default function App() {
   const isDashboard = location.pathname === "/dashboard";
   const onLoginPage = location.pathname === "/login";
 
-  // Initial load: pull both from Supabase
   useEffect(() => {
     (async () => {
       const [a, e] = await Promise.all([
-        fetchArticlesFromSupabase(),
+        fetchArticlesHybrid(),
         fetchEventsFromSupabase(),
       ]);
       setArticles(a);
@@ -161,7 +174,6 @@ export default function App() {
     })();
   }, []);
 
-  // Bookmark toggle logic
   const toggleBookmark = (id, current) => {
     setArticles((list) => {
       const next = list.map((it) =>
@@ -175,13 +187,12 @@ export default function App() {
     });
   };
 
-  // Refresh button: optionally trigger ETL, then re-read both from Supabase
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
       await Promise.all([maybeTriggerNewsRefresh(), maybeTriggerEventsRefresh()]);
       const [a, e] = await Promise.all([
-        fetchArticlesFromSupabase(),
+        fetchArticlesHybrid(),
         fetchEventsFromSupabase(),
       ]);
       setArticles(a);
@@ -203,13 +214,10 @@ export default function App() {
 
       <main className={`grid ${isDashboard ? "dashboard-page" : ""}`}>
         <Routes>
-          {/* Public route */}
           <Route
             path="/login"
             element={session ? <Navigate to="/" replace /> : <Login />}
           />
-
-          {/* Protected routes */}
           {session ? (
             <>
               <Route
@@ -222,12 +230,10 @@ export default function App() {
                   />
                 }
               />
-
               <Route
                 path="/dashboard"
                 element={<Dashboard articles={articles} events={events} />}
               />
-
               <Route
                 path="/bookmarks"
                 element={
@@ -238,7 +244,6 @@ export default function App() {
                   />
                 }
               />
-
               <Route path="*" element={<Navigate to="/" replace />} />
             </>
           ) : (
