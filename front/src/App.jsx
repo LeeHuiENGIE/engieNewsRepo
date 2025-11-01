@@ -17,58 +17,62 @@ import Header from "./components/Header.jsx";
    If not set, Refresh just re-reads from Supabase (no POST). */
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
-/* ---------------- Helpers: Articles (Supabase) ---------------- */
-async function fetchArticlesFromSupabase() {
+/* ---------------- Helpers: Articles ---------------- */
+async function fetchArticlesTryBoth() {
   const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
 
-  // Helper to run the select with a given order column (or no order)
-  const run = async (orderCol) => {
-    let q = supabase.from("news").select("*");
-    if (orderCol) q = q.order(orderCol, { ascending: false });
-    const { data, error } = await q;
-    if (error) throw error;
-    return data || [];
-  };
-
-  try {
-    let rows;
+  for (const base of ["http://localhost:8000", "http://127.0.0.1:8000"]) {
     try {
-      rows = await run("inserted_at"); // most likely
-    } catch {
-      try {
-        rows = await run("Published");  // legacy name
-      } catch {
-        try {
-          rows = await run("published"); // lowercase variant
-        } catch {
-          rows = await run(undefined);   // no ordering if none exists
-        }
+      const res = await fetch(`${base}/articles`, { credentials: "omit" });
+      if (res.ok) {
+        const raw = await res.json();
+        const data = (raw || []).map((d) => ({
+          ...d,
+          id: d.Link || d.id,
+          Bookmarked: !!saved[d.Link || d.id],
+        }));
+        console.log(`[ENGIE] Loaded articles from backend: ${base}`);
+        return data;
+      } else {
+        console.warn(`[ENGIE] ${base}/articles responded ${res.status}`);
       }
-    }
-
-    return rows.map((d) => ({
-      ...d,
-      id: d.Link || d.id,
-      Bookmarked: !!saved[d.Link || d.id],
-    }));
-  } catch (err) {
-    console.error("[ENGIE] Supabase articles fetch failed:", err?.message || err);
-
-    // Fallback: static JSON bundled with build
-    try {
-      const res = await fetch("/articles.json");
-      const raw = await res.json();
-      console.log("[ENGIE] Loaded articles from local:/articles.json (fallback)");
-      return (raw || []).map((d) => ({
-        ...d,
-        id: d.Link,
-        Bookmarked: !!saved[d.Link],
-      }));
     } catch (e) {
-      console.error("[ENGIE] Fallback /articles.json failed:", e);
-      return [];
+      console.warn(`[ENGIE] fetch failed from ${base}/articles`, e);
     }
   }
+
+  // Fallback to local JSON
+  try {
+    const res = await fetch("/articles.json");
+    const raw = await res.json();
+    const data = (raw || []).map((d) => ({
+      ...d,
+      id: d.Link,
+      Bookmarked: !!saved[d.Link],
+    }));
+    console.log("[ENGIE] Loaded articles from local:/articles.json");
+    return data;
+  } catch (e) {
+    console.error("[ENGIE] Failed to load local /articles.json", e);
+    return [];
+  }
+}
+
+async function triggerRefreshTryBoth() {
+  for (const base of ["http://localhost:8000", "http://127.0.0.1:8000"]) {
+    try {
+      const res = await fetch(`${base}/refresh`, { method: "POST" });
+      if (res.ok) {
+        console.log(`[ENGIE] Refresh triggered via ${base}/refresh`);
+        return true;
+      } else {
+        console.warn(`[ENGIE] ${base}/refresh responded ${res.status}`);
+      }
+    } catch (e) {
+      console.warn(`[ENGIE] refresh failed via ${base}/refresh`, e);
+    }
+  }
+  return false;
 }
 
 /* ---------------- Helpers: Events (Supabase) ---------------- */
