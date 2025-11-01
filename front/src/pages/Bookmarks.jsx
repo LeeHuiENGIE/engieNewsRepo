@@ -1,14 +1,8 @@
-// src/pages/Bookmarks.jsx
+
 import { useEffect, useMemo, useRef, useState } from "react";
+import NewsCard from "../components/NewsCard.jsx";
 import { supabase } from "../lib/supabaseClient";
 
-import NewsCard from "../components/NewsCard.jsx";
-
-/* Supabase client (service key as requested) */
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_SERVICE_KEY
-);
 
 /* Helpers */
 function timeAgo(iso) {
