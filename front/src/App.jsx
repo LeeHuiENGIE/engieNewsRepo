@@ -14,13 +14,15 @@ import Header from "./components/Header.jsx";
 /* Optional admin ETL backend:
    - If VITE_API_BASE is set, Refresh will POST to it.
    - Articles will prefer backend first (same as your old local flow). */
-const API_BASE = import.meta.env.VITE_API_BASE || "";
+const API_BASE  = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+const API_TOKEN = import.meta.env.VITE_BACKEND_TOKEN || "";
+console.log("[ENGIE] API_BASE =", API_BASE || "(none)");
 
 /* ---------------- Articles: BACKEND → Supabase → local.json ---------------- */
 async function fetchArticlesBackendFirst() {
   const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
 
-  // 1) Backend (bypasses RLS; mirrors your local working flow)
+  // 1) Backend (mirrors your local working flow)
   if (API_BASE) {
     try {
       const r = await fetch(`${API_BASE}/articles`, { credentials: "omit" });
@@ -40,7 +42,7 @@ async function fetchArticlesBackendFirst() {
     }
   }
 
-  // 2) Supabase direct (if backend not set or fails)
+  // 2) Supabase direct
   try {
     const run = async (col) => {
       let q = supabase.from("news").select("*");
@@ -89,7 +91,6 @@ async function fetchArticlesBackendFirst() {
 /* ---------------- Events: straight from Supabase (server-side filter) ------- */
 async function fetchEventsFromSupabase() {
   try {
-    // Only upcoming events (today or later) so UI never shows “No upcoming…”
     const today = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase
       .from("events")
@@ -111,10 +112,19 @@ async function fetchEventsFromSupabase() {
 }
 
 /* ---------------- Optional: trigger ETL on backend ---------------- */
+function authHeaders() {
+  return API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : undefined;
+}
+
 async function maybeTriggerNewsRefresh() {
   if (!API_BASE) return false;
   try {
-    const res = await fetch(`${API_BASE}/refresh`, { method: "POST" });
+    const res = await fetch(`${API_BASE}/refresh`, {
+      method: "POST",
+      headers: authHeaders(),
+      credentials: "omit",
+      mode: "cors",
+    });
     if (res.ok) {
       console.log("[ENGIE] refresh news OK");
       return true;
@@ -129,7 +139,12 @@ async function maybeTriggerNewsRefresh() {
 async function maybeTriggerEventsRefresh() {
   if (!API_BASE) return false;
   try {
-    const res = await fetch(`${API_BASE}/refresh/events`, { method: "POST" });
+    const res = await fetch(`${API_BASE}/refresh/events`, {
+      method: "POST",
+      headers: authHeaders(),
+      credentials: "omit",
+      mode: "cors",
+    });
     if (res.ok) {
       console.log("[ENGIE] refresh events OK");
       return true;
