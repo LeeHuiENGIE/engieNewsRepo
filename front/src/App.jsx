@@ -19,6 +19,17 @@ const API_BASE = import.meta.env.VITE_API_BASE || "";
 
 /* ---------------- Helpers: Articles (Supabase) ---------------- */
 async function fetchArticlesFromSupabase() {
+
+  // quick RLS check: count-only request
+    const head = await supabase
+      .from("news")
+      .select("*", { count: "exact", head: true });
+
+    console.log("[ENGIE] news head count probe", {
+      error: head.error?.message || null,
+      count: head.count ?? null,
+    });
+
   const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
 
   const run = async (orderCol) => {
