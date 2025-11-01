@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useSession } from "./auth/useSession";
-
-// Supabase client (your code)
-import { supabase } from "./lib/supabaseClient.js";
+import { supabase } from "./lib/supabaseClient"; // <-- adjust path only if yours differs
 
 // Pages
 import Login from "./pages/Login.jsx";
@@ -14,15 +12,86 @@ import Bookmarks from "./pages/Bookmarks.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Header from "./components/Header.jsx";
 
-/* ---------------- Admin-only backend triggers (Render) ----------------
-   NOTE: Only used by the Refresh button for admins to run ETL.
-   The UI reads data directly from Supabase.
------------------------------------------------------------------------ */
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  "https://engie-news-backend-docker.onrender.com";
+/* ---------------- Optional admin ETL backend ----------------
+   If you set VITE_API_BASE, the Refresh button will call it.
+   If not set, Refresh just re-reads from Supabase (no POST). */
+const API_BASE = import.meta.env.VITE_API_BASE || "";
 
-async function triggerRefresh() {
+/* ---------------- Helpers: Articles (Supabase) ---------------- */
+async function fetchArticlesFromSupabase() {
+  const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
+
+  // Helper to run the select with a given order column (or no order)
+  const run = async (orderCol) => {
+    let q = supabase.from("news").select("*");
+    if (orderCol) q = q.order(orderCol, { ascending: false });
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  };
+
+  try {
+    let rows;
+    try {
+      rows = await run("inserted_at"); // most likely
+    } catch {
+      try {
+        rows = await run("Published");  // legacy name
+      } catch {
+        try {
+          rows = await run("published"); // lowercase variant
+        } catch {
+          rows = await run(undefined);   // no ordering if none exists
+        }
+      }
+    }
+
+    return rows.map((d) => ({
+      ...d,
+      id: d.Link || d.id,
+      Bookmarked: !!saved[d.Link || d.id],
+    }));
+  } catch (err) {
+    console.error("[ENGIE] Supabase articles fetch failed:", err?.message || err);
+
+    // Fallback: static JSON bundled with build
+    try {
+      const res = await fetch("/articles.json");
+      const raw = await res.json();
+      console.log("[ENGIE] Loaded articles from local:/articles.json (fallback)");
+      return (raw || []).map((d) => ({
+        ...d,
+        id: d.Link,
+        Bookmarked: !!saved[d.Link],
+      }));
+    } catch (e) {
+      console.error("[ENGIE] Fallback /articles.json failed:", e);
+      return [];
+    }
+  }
+}
+
+/* ---------------- Helpers: Events (Supabase) ---------------- */
+async function fetchEventsFromSupabase() {
+  try {
+    // Adjust to your actual events table & columns
+    // We assume: table "events" with "starts_on" (date), "region", "title", "link"
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .order("starts_on", { ascending: true });
+
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error("[ENGIE] Supabase events fetch failed:", err?.message || err);
+    return [];
+  }
+}
+
+/* ---------------- Optional: trigger ETL on backend ---------------- */
+async function maybeTriggerNewsRefresh() {
+  if (!API_BASE) return false;
   try {
     const res = await fetch(`${API_BASE}/refresh`, { method: "POST" });
     if (res.ok) {
@@ -36,63 +105,19 @@ async function triggerRefresh() {
   return false;
 }
 
-async function triggerRefreshEvents() {
+async function maybeTriggerEventsRefresh() {
+  if (!API_BASE) return false;
   try {
     const res = await fetch(`${API_BASE}/refresh/events`, { method: "POST" });
     if (res.ok) {
-      console.log(
-        `[ENGIE] Events refresh triggered via ${API_BASE}/refresh/events`
-      );
+      console.log(`[ENGIE] Events refresh triggered via ${API_BASE}/refresh/events`);
       return true;
     }
-    console.warn(
-      `[ENGIE] ${API_BASE}/refresh/events responded ${res.status}`
-    );
+    console.warn(`[ENGIE] ${API_BASE}/refresh/events responded ${res.status}`);
   } catch (e) {
     console.warn(`[ENGIE] refresh events failed via ${API_BASE}/refresh/events`, e);
   }
   return false;
-}
-
-/* ---------------- Supabase reads (users) ---------------- */
-async function fetchArticlesFromSupabase() {
-  try {
-    const { data, error } = await supabase
-      .from("news")
-      .select("*")
-      // adjust to your actual timestamp columns; these are used around the app
-      .order("PublishedAt", { ascending: false, nullsFirst: false });
-
-    if (error) throw error;
-
-    const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
-    return (data || []).map((d) => ({
-      ...d,
-      id: d.Link || d.id, // used throughout UI
-      Bookmarked: !!saved[d.Link || d.id],
-    }));
-  } catch (err) {
-    console.error("[ENGIE] Supabase articles fetch failed:", err?.message || err);
-    return [];
-  }
-}
-
-async function fetchEventsFromSupabase() {
-  try {
-    // Show only upcoming events; tweak column names if needed
-    const today = new Date().toISOString().slice(0, 10);
-    const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .gte("starts_on", today)
-      .order("starts_on", { ascending: true });
-
-    if (error) throw error;
-    return data || [];
-  } catch (err) {
-    console.error("[ENGIE] Supabase events fetch failed:", err?.message || err);
-    return [];
-  }
 }
 
 /* ---------------- Main App ---------------- */
@@ -107,7 +132,7 @@ export default function App() {
   const isDashboard = location.pathname === "/dashboard";
   const onLoginPage = location.pathname === "/login";
 
-  // Initial load: read both from Supabase
+  // Initial load: pull both from Supabase
   useEffect(() => {
     (async () => {
       const [a, e] = await Promise.all([
@@ -119,7 +144,7 @@ export default function App() {
     })();
   }, []);
 
-  // Bookmark toggle logic (local only)
+  // Bookmark toggle logic (unchanged)
   const toggleBookmark = (id, current) => {
     setArticles((list) => {
       const next = list.map((it) =>
@@ -133,13 +158,11 @@ export default function App() {
     });
   };
 
-  // Admin Refresh: trigger ETL via Render, then re-read from Supabase
+  // Refresh button: optionally trigger ETL, then re-read both from Supabase
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
-      await triggerRefresh();          // news ETL (admin)
-      await triggerRefreshEvents();    // events ETL (admin)
-
+      await Promise.all([maybeTriggerNewsRefresh(), maybeTriggerEventsRefresh()]);
       const [a, e] = await Promise.all([
         fetchArticlesFromSupabase(),
         fetchEventsFromSupabase(),
@@ -183,7 +206,6 @@ export default function App() {
                 }
               />
 
-              {/* Dashboard uses both articles & events */}
               <Route
                 path="/dashboard"
                 element={<Dashboard articles={articles} events={events} />}
