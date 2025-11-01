@@ -1,0 +1,204 @@
+/* Dashboard.css */
+
+/* Only affect <main> when we are on /dashboard */
+main.grid.dashboard-page {
+  display: block !important;
+  padding: 0 !important;
+}
+
+/* Theme (safe to keep global) */
+:root{
+  --bg:#f6f9ff; --panel:#fff; --panel-weak:#eef5ff;
+  --ink:#0b2a4a; --ink-weak:#5b6f8b;
+  --brand:#2b6ae6; --brand-2:#3a86ff;
+  --radius:16px; --shadow:0 10px 30px rgba(21,73,170,.08);
+}
+
+/* Page container (dashboard only) */
+.dash-wrap{
+  background:
+    radial-gradient(1200px 600px at 60% -10%, #eaf2ff 0%, transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, #eef4ff 0%, transparent 55%),
+    #f6f9ff;
+  color:var(--ink);
+  min-height:calc(100vh - 64px);
+  max-width:1280px; margin:24px auto 48px; padding:0 20px;
+}
+
+/* === LAYOUT ===
+   Row 1:  [events] [map map]
+   Row 2:  [      latest latest ]  (Latest spans both right columns)
+   Row 3:  [      volume volume ]  (Volume on its own row, full width)
+*/
+.dash-wrap.dash-layout-alt{
+  display:grid;
+  grid-template-columns: 320px 1fr 1fr;   /* left rail + two right cols */
+  grid-auto-rows:min-content;
+  grid-template-areas:
+    "events map map"
+    "latest latest volume"
+    ;
+  gap:20px;
+}
+
+/* Cards – glassy minimal style (scoped) */
+.dash-wrap .card{
+  background:rgba(255,255,255,0.88);
+  backdrop-filter:saturate(1.15) blur(6px);
+  -webkit-backdrop-filter:saturate(1.15) blur(6px);
+  border:1px solid rgba(43,106,230,0.08);
+  box-shadow:0 12px 28px rgba(19,57,130,0.08);
+  border-radius:18px;
+  animation:fadeUp .42s ease-out both;
+  transition:transform .24s ease, box-shadow .24s ease, border-color .24s ease;
+}
+.dash-wrap .card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 18px 44px rgba(19,57,130,0.12);
+  border-color:rgba(43,106,230,0.12);
+}
+.dash-wrap .card-head{padding:16px 18px 0;}
+.dash-wrap .card-head h2,
+.dash-wrap .card-head h3{margin:0;font-weight:700;letter-spacing:.1px;}
+
+/* Grid areas */
+[data-area="events"]{grid-area:events;}
+[data-area="map"]{grid-area:map;}
+[data-area="latest"]{grid-area:latest;}
+[data-area="volume"]{grid-area:volume;}
+
+/* Hero map (scoped) */
+.dash-wrap .hero-map{padding-bottom:12px;}
+.dash-wrap .map-canvas{padding:14px 16px 18px;}
+.dash-wrap .asean-map-wrap{position:relative;}
+.dash-wrap .hero-map svg{
+  width:100%;height:430px;border-radius:16px;
+  background:linear-gradient(180deg,#f7fbff 0%,#ffffff 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 0 40px rgba(43,106,230,0.06);
+  transition:filter .4s ease,background .4s ease;
+}
+.dash-wrap .hero-map:hover svg{
+  filter:drop-shadow(0 12px 28px rgba(43,106,230,.12));
+}
+.dash-wrap .map-note{margin-top:10px;color:var(--ink-weak);font-size:.92rem;}
+
+/* Map hover glow (scoped) */
+.dash-wrap .asean-map-wrap path{
+  transition:fill .28s ease,filter .28s ease;
+}
+/* Map hover glow (scoped) — red interaction */
+.dash-wrap .asean-map-wrap path {
+  transition: fill .28s ease, filter .28s ease;
+}
+
+/* ✅ Hover = light red fill, red border glow */
+.dash-wrap .asean-map-wrap path:hover {
+  fill: #fee2e2 !important; /* light red */
+  filter: drop-shadow(0 0 6px rgba(239,68,68,0.35));
+  cursor: pointer;
+  transition: fill .3s ease, filter .3s ease;
+}
+
+/* Events list (scoped) */
+.dash-wrap .events-list{list-style:none;margin:8px 10px 12px;padding:0;}
+.dash-wrap .event-row{
+  display:grid;grid-template-columns:84px 1fr;gap:12px;
+  padding:12px;margin-bottom:10px;
+  border-radius:12px;
+  background:linear-gradient(180deg,#f4f7ff 0%,#ffffff 100%);
+  border:1px solid rgba(43,106,230,0.06);
+  box-shadow:0 6px 16px rgba(19,57,130,0.06);
+  transition:background .2s ease,transform .2s ease,box-shadow .2s ease;
+}
+.dash-wrap .event-row:hover{
+  transform:translateX(3px);
+  background:linear-gradient(180deg,#f0f6ff 0%,#ffffff 100%);
+  box-shadow:0 10px 24px rgba(19,57,130,0.10);
+}
+.dash-wrap .event-date{color:var(--brand);font-weight:800;}
+.dash-wrap .event-title{font-weight:700;margin-bottom:3px;}
+.dash-wrap .event-region{color:var(--ink-weak);font-size:.9rem;}
+
+/* Latest list (scoped) */
+.dash-wrap .latest-list{list-style:none;margin:8px 10px 8px;padding:0;}
+.dash-wrap .latest-row{
+  display:grid;grid-template-columns:90px 1fr;gap:12px;
+  padding:12px 6px;
+  border-bottom:1px solid rgba(43,106,230,0.08);
+  background:transparent;
+  transition:background .2s ease;
+}
+.dash-wrap .latest-row:last-child{border-bottom:0;}
+.dash-wrap .latest-row:hover{background:rgba(234,242,255,0.45);}
+.dash-wrap .latest-date{color:var(--brand);font-weight:800;}
+.dash-wrap .latest-title{font-weight:700;}
+
+/* Chart card (scoped) */
+.dash-wrap .chart-wrap{padding:6px 4px 10px;}
+.dash-wrap .recharts-cartesian-grid-horizontal line{stroke:rgba(43,106,230,0.10);}
+.dash-wrap .recharts-cartesian-grid-vertical line{stroke:rgba(43,106,230,0.06);}
+.dash-wrap .recharts-text{fill:#5b6f8b !important;}
+.dash-wrap .recharts-area-curve,
+.dash-wrap .recharts-area-area{
+  transition:all 900ms cubic-bezier(.22,.61,.36,1);
+}
+
+/* Fade-up animation + stagger (scoped) */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.dash-wrap.dash-layout-alt > .card:nth-of-type(1){animation-delay:.04s;}
+.dash-wrap.dash-layout-alt > .card:nth-of-type(2){animation-delay:.08s;}
+.dash-wrap.dash-layout-alt > .card:nth-of-type(3){animation-delay:.12s;}
+.dash-wrap.dash-layout-alt > .card:nth-of-type(4){animation-delay:.16s;}
+
+
+
+/* Reduced motion */
+@media (prefers-reduced-motion:reduce){
+  .dash-wrap *{animation:none !important;transition:none !important;}
+}
+
+/* Bottom-left selection label (scoped) */
+.dash-wrap .asean-map-wrap { position: relative; }
+.dash-wrap .asean-selected{
+  position:absolute; left:18px; bottom:14px; z-index:2;
+  color:#0b2a4a; font-size:14px; font-weight:600;
+  background:rgba(255,255,255,.75);
+  border:1px solid rgba(43,106,230,.18);
+  border-radius:10px; padding:6px 10px;
+  backdrop-filter:blur(4px);
+  box-shadow:0 6px 20px rgba(43,106,230,.08);
+  transition:all .3s ease;
+}
+
+/* “See all news →” link (scoped) */
+.dash-wrap .see-all-link{
+  text-align:right;
+  color:#2b6ae6;
+  font-weight:600;
+  margin:8px 16px 14px;
+  cursor:pointer;
+  transition:color .25s ease, transform .2s ease;
+}
+.dash-wrap .see-all-link:hover{
+  color:#1a4ec4;
+  transform:translateX(3px);
+}
+
+
+/* Clickable Latest Articles titles only on the Dashboard */
+.dashboard-page .latest-list .dash-latest-link {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+  transition: color .15s ease, text-decoration-color .15s ease;
+}
+
+.dashboard-page .latest-list .dash-latest-link:hover {
+  color: #1e63ff;
+  text-decoration: underline;
+}

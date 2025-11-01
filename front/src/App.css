@@ -1,0 +1,200 @@
+/* src/App.css */
+/* ===== Design tokens ===== */
+:root{
+  --bg:#eef5ff;
+  --panel:#fff;
+  --brand:#0a5bd3;
+  --muted:#6b7a90;
+  --border:#e3e9f5;
+  --chip:#d7e3ff;
+  --ink:#1c2430;
+}
+
+*{ box-sizing:border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+body{ margin:0; background:var(--bg); color:var(--ink); }
+
+/* ===== Header / Nav ===== */
+.header{
+  position:sticky; top:0; z-index:5;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:16px 24px; color:#fff;
+  background:linear-gradient(90deg, var(--brand), #2a7cff);
+  box-shadow:0 2px 10px rgba(10,91,211,.25);
+}
+.brand{ font-weight:800; font-size:20px; }
+.nav{ display:flex; gap:12px; }
+.navlink{ color:#e9f1ff; text-decoration:none; padding:6px 10px; border-radius:8px; }
+.navlink.active{ background:rgba(255,255,255,.18); }
+
+/* ===== Grid + Card ===== */
+.grid{
+  display:grid;
+  gap:18px;
+  grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
+  padding:22px;
+  align-items:stretch;               /* each cell same height */
+}
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  height:100%;                       /* fill the grid cell */
+  box-shadow:0 6px 18px rgba(30,70,140,.07);
+}
+.card-head{ display:flex; justify-content:space-between; gap:8px; }
+.title{ font-weight:700; font-size:18px; }
+.source{ font-size:12px; color:var(--muted); }
+
+/* Clamp summary WITHOUT reserving extra blank space */
+.summary{
+  font-size:14px; color:#3a4657;
+  display:-webkit-box;
+  -webkit-line-clamp:4;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+.card-foot{
+  display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;
+  margin-top:4px;                   /* stick to bottom of the card */
+}
+.tags{ display:flex; gap:8px; flex-wrap:wrap; }
+.chip{ font-size:12px; padding:4px 10px; background:#f7f9ff; border:1px solid var(--chip); border-radius:999px; }
+.ago{ font-size:12px; color:var(--muted); }
+.btn{ padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; }
+.btn.primary{ background:var(--brand); color:#fff; border-color:transparent; }
+.btn.ghost{ background:#fff; }
+.btn.small{ padding:6px 10px; font-size:13px; }
+.btn:active{ transform:translateY(1px); }
+.empty{ padding:24px; color:var(--muted); }
+
+/* ===== Banner (full width within grid) ===== */
+.grid-full{ grid-column:1 / -1; }
+
+.top-banner{
+  background:#f2f4f7;
+  padding:24px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(30,70,140,.06);
+  text-align:center;
+}
+.top-banner h2{ margin:0 0 6px; font-size:22px; font-weight:800; color:var(--ink); }
+.top-banner p{ margin:0 0 14px; font-size:14px; color:var(--muted); }
+
+/* ===== Filters row ===== */
+.filters{ display:flex; justify-content:center; gap:16px; flex-wrap:wrap; }
+.filter{ display:flex; align-items:center; gap:6px; font-size:14px; }
+.filter label{ color:var(--ink); font-weight:500; }
+.filter select{
+  padding:6px 10px; border-radius:8px; border:1px solid var(--border);
+  background:#fff; font-size:14px; cursor:pointer;
+}
+
+/* ===== Counters ===== */
+.total-line{ margin-top:10px; font-size:14px; color:var(--ink); }
+.total-line strong{ font-weight:700; }
+
+/* ===== Folder grid ===== */
+.folder-grid{ grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); }
+
+.folder-card{
+  cursor:pointer;
+  min-height:150px;                 /* uniform height */
+  display:flex; flex-direction:column; justify-content:space-between;
+  transition: transform .08s ease, box-shadow .12s ease;
+}
+.folder-card:hover{ transform:translateY(-1px); box-shadow:0 10px 28px rgba(16,56,120,.12); }
+.folder-meta{ font-size:13px; color:var(--muted); margin:2px 0 10px; }
+.folder-count{ border:1px solid var(--border); background:#f7f9ff; color:#1f3b6e; font-size:12px; padding:8px 10px; border-radius:10px; }
+.folder-card.create-card{ min-height:150px; }
+
+/* ===== Bookmark meta below each card (folder detail) ===== */
+.bookmark-meta{
+  position:relative; z-index:2;
+  background:var(--bg);
+  padding:2px 4px;
+  margin-top:8px;                   /* a bit more breathing room */
+  margin-bottom:10px;
+  border-radius:6px;
+  font-size:12px; color:var(--muted);
+}
+
+/* ===== Auth (kept from your theme) ===== */
+.auth-wrap{
+  min-height:100vh; width:100vw; display:flex; align-items:center; justify-content:center;
+  background: radial-gradient(circle at center, #0b1220, #060a14);
+}
+.auth-card{
+  width:100%; max-width:440px; background:#fff; border:1px solid var(--border); border-radius:20px;
+  padding:28px; box-shadow:0 12px 40px rgba(10,20,60,.12); animation:pop-in .25s ease-out;
+}
+@keyframes pop-in{ from{ transform:translateY(8px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+.auth-brand{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.auth-brand h1{ margin:0; font-size:22px; letter-spacing:.2px; }
+.auth-brand .dot{ width:10px; height:10px; border-radius:999px; background:var(--brand); box-shadow:0 0 12px rgba(41,82,255,.8); }
+.auth-sub{ margin:0 0 18px; color:var(--muted); font-size:14px; }
+.auth-form{ display:grid; gap:10px; margin-bottom:12px; }
+.auth-label{ font-size:13px; color:var(--muted); }
+.auth-input{
+  width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
+  background:#fbfcff; color:var(--ink); outline:none; transition:border .15s, box-shadow .15s, background .15s;
+}
+.auth-input::placeholder{ color:#94a1b6; }
+.auth-input:focus{ border-color:#2952ff; box-shadow:0 0 0 4px rgba(41,82,255,.15); background:#fff; }
+.auth-btn{
+  width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
+  background:#f7f9ff; color:var(--ink); cursor:pointer; font-weight:600;
+  transition:transform .06s, box-shadow .12s, background .12s;
+}
+.auth-btn:hover{ transform:translateY(-1px); }
+.auth-btn.primary{ background:linear-gradient(180deg,#e9f0ff,#cddbff); color:#0b1220; border-color:transparent; box-shadow:0 6px 16px rgba(41,82,255,.22); }
+.auth-alert{ margin-top:4px; padding:10px 12px; border-radius:10px; font-size:13px; border:1px solid transparent; }
+.auth-alert.ok{ background:rgba(46,204,113,.12); border-color:rgba(46,204,113,.25); }
+.auth-alert.error{ background:rgba(255,107,107,.12); border-color:rgba(255,107,107,.28); }
+.auth-footer{ margin-top:10px; color:var(--muted); font-size:12px; text-align:center; }
+
+
+/* Make buttons consistent, sleek, and modern */
+
+.header .btn {
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 6px 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+/* --- Search Button (light translucent look) --- */
+.header .btn:not(.logout-btn) {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+.header .btn:not(.logout-btn):hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* --- Logout Button (outlined white capsule) --- */
+.header .logout-btn {
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  color: #fff;
+  font-weight: 500;
+}
+
+.header .logout-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #fff;
+}
+
+/* Optional subtle shadow for both */
+.header .btn:hover {
+  box-shadow: 0 2px 6px rgba(255, 255, 255, 0.15);
+}

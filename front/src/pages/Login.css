@@ -1,0 +1,188 @@
+/* =============================
+   ENGIE News Repo 3.0 — Login Page
+   Clean, centered, and sleek
+============================= */
+
+/* Full-screen layout */
+.login-page.center {
+  position: fixed;          /* makes it independent of other layouts */
+  inset: 0;                 /* shorthand for top/right/bottom/left = 0 */
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 3vw, 32px);
+  background:
+    radial-gradient(1100px 600px at 15% 10%, rgba(59,130,246,.10), transparent 60%),
+    radial-gradient(900px 520px at 85% 90%, rgba(59,130,246,.14), transparent 60%),
+    linear-gradient(180deg, #f7fbff, #eef5ff);
+  overflow: auto;
+  z-index: 50;
+}
+
+/* Glass card */
+.login-card {
+  width: min(420px, 92vw);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 24px;
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  box-shadow:
+    0 14px 36px rgba(17, 24, 39, 0.1),
+    0 2px 6px rgba(17, 24, 39, 0.06),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  text-align: center;
+  padding: 36px 30px 28px;
+  animation: loginFade 0.45s ease;
+}
+
+@keyframes loginFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo bubble */
+.login-logo {
+  width: 150px;
+  height: 90px;
+  margin: 0 auto 14px;
+  border-radius: 20px;
+  /* background: linear-gradient(180deg, #60a5fa, #2563eb);
+  /* box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22); */
+  display: grid;
+  place-items: center;
+}
+.login-logo img {
+  width: 100px;
+  height: 50px;
+}
+
+/* Title and subtitle */
+.login-title {
+  margin: 6px 0 6px;
+  font: 800 20px/1.2 "Inter", system-ui, sans-serif;
+  color: #0f172a;
+  letter-spacing: 0.2px;
+}
+.login-title span {
+  color: #2563eb;
+}
+.login-sub {
+  margin: 0 0 20px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* Input fields */
+.login-form {
+  display: grid;
+  gap: 12px;
+}
+.input-field {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+  border: 1px solid transparent;
+}
+.input-field:focus-within {
+  background: #fff;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+.input-field input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+/* Alerts */
+.alert {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.alert.ok {
+  background: #e0f2fe;
+  color: #1e3a8a;
+}
+
+/* Submit button */
+.btn-submit {
+  margin-top: 4px;
+  height: 46px;
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 14px;
+  color: #fff;
+  background: linear-gradient(180deg, #2563eb, #1e40af);
+  box-shadow:
+    0 12px 26px rgba(37, 99, 235, 0.22),
+    0 3px 10px rgba(30, 64, 175, 0.16);
+  cursor: pointer;
+  transition: transform 0.05s ease, filter 0.2s ease;
+}
+.btn-submit:hover {
+  filter: brightness(1.04);
+}
+.btn-submit:active {
+  transform: translateY(1px);
+}
+.btn-submit:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.login-footer {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #98a2b3;
+}
+
+/* Small screens */
+@media (max-width: 420px) {
+  .login-card {
+    padding: 28px 20px 22px;
+  }
+}
+
+
+/* refined eye icon feel */
+.subtle-eye {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  color: #475569; /* slate grey instead of harsh black */
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.subtle-eye:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+}
+.subtle-eye svg {
+  stroke: currentColor;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+.subtle-eye:hover svg {
+  opacity: 1;
+}
+
