@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useSession } from "./auth/useSession";
-import { supabase } from "./lib/supabaseClient"; // <-- adjust path only if yours differs
+import { supabase } from "./lib/supabaseClient"; // make sure this points to your actual file
 
 // Pages
 import Login from "./pages/Login.jsx";
@@ -21,17 +21,35 @@ const API_BASE = import.meta.env.VITE_API_BASE || "";
 async function fetchArticlesFromSupabase() {
   const saved = JSON.parse(localStorage.getItem("bookmarks") || "{}");
 
-  try {
-    // Fetch directly from the 'news' table ordered by inserted_at (your actual timestamp column)
-    const { data, error } = await supabase
-      .from("news")
-      .select("*")
-      .order("inserted_at", { ascending: false });
-
+  const run = async (orderCol) => {
+    let q = supabase.from("news").select("*");
+    if (orderCol) q = q.order(orderCol, { ascending: false });
+    const { data, error } = await q;
+    console.log("[ENGIE] news select", {
+      orderCol: orderCol || "(none)",
+      error: error?.message || null,
+      rows: data?.length ?? null,
+    });
     if (error) throw error;
+    return data || [];
+  };
 
-    // Normalize and add bookmark info
-    return (data || []).map((d) => ({
+  try {
+    let rows;
+    try {
+      rows = await run("inserted_at"); // main column in your DB
+      if (!rows.length) {
+        rows = await run("published"); // fallback if inserted_at is empty
+      }
+    } catch {
+      try {
+        rows = await run("published");
+      } catch {
+        rows = await run(undefined);
+      }
+    }
+
+    return rows.map((d) => ({
       ...d,
       id: d.Link || d.id,
       Bookmarked: !!saved[d.Link || d.id],
@@ -39,7 +57,7 @@ async function fetchArticlesFromSupabase() {
   } catch (err) {
     console.error("[ENGIE] Supabase articles fetch failed:", err?.message || err);
 
-    // Fallback: static JSON (local bundle)
+    // fallback: local JSON
     try {
       const res = await fetch("/articles.json");
       const raw = await res.json();
@@ -56,16 +74,18 @@ async function fetchArticlesFromSupabase() {
   }
 }
 
-
 /* ---------------- Helpers: Events (Supabase) ---------------- */
 async function fetchEventsFromSupabase() {
   try {
-    // Adjust to your actual events table & columns
-    // We assume: table "events" with "starts_on" (date), "region", "title", "link"
     const { data, error } = await supabase
       .from("events")
       .select("*")
       .order("starts_on", { ascending: true });
+
+    console.log("[ENGIE] events select", {
+      error: error?.message || null,
+      rows: data?.length ?? null,
+    });
 
     if (error) throw error;
     return Array.isArray(data) ? data : [];
@@ -130,7 +150,7 @@ export default function App() {
     })();
   }, []);
 
-  // Bookmark toggle logic (unchanged)
+  // Bookmark toggle logic
   const toggleBookmark = (id, current) => {
     setArticles((list) => {
       const next = list.map((it) =>
