@@ -1,5 +1,7 @@
 // front/src/pages/Home.jsx
 import { useMemo, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
+
 import NewsCard from "../components/NewsCard.jsx";
 
 function getDateSafe(a) {

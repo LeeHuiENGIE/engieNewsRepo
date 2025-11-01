@@ -1,14 +1,14 @@
+
 import { createClient } from "@supabase/supabase-js";
 
-const url =
-  import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL;
-const anon =
-  import.meta.env.VITE_SUPABASE_SERVICE_KEY || import.meta.env.SUPABASE_SERVICE_KEY;
+// Only Vite vars are available in a Vite build.
+const url = import.meta.env.VITE_SUPABASE_URL;
+const key = import.meta.env.VITE_SUPABASE_SERVICE_KEY; // you said you want service key
 
-if (!url || !anon) {
-  console.error("Missing Supabase env. Put VITE_SUPABASE_URL and VITE_SUPABASE_SERVICE_KEY in front/.env");
+if (!url || !key) {
+  console.error("[Supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_SERVICE_KEY");
 }
 
-export const supabase = createClient(url, anon, {
+export const supabase = createClient(url, key, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });

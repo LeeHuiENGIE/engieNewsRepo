@@ -1,6 +1,7 @@
 // src/pages/Bookmarks.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabaseClient";
+
 import NewsCard from "../components/NewsCard.jsx";
 
 /* Supabase client (service key as requested) */
