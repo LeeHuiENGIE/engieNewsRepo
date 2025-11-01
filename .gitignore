@@ -1,0 +1,23 @@
+# ===== general =====
+.DS_Store
+.env
+.env.*
+*.log
+
+# ===== node (frontend) =====
+front/node_modules
+front/dist
+front/.vite
+front/.vercel
+
+# ===== python (backend) =====
+back/__pycache__/
+back/.venv/
+back/venv/
+*.pyc
+*.pyo
+*.pyd
+
+# ===== misc =====
+*.swp
+*.bak
