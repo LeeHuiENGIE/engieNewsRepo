@@ -52,7 +52,7 @@ RSS_FEEDS = [
 # ============ Keyword rules (used by rss_adapter / filters) ============
 ANY_KEYWORDS = _csv("ANY_KEYWORDS", [
     "engie", "energy", "carbon", "regulation", "policy",
-    "emissions", "solar", "wind", "fuel", "battery",
+    "emissions", "solar", "wind", "fuel", "battery", "district cooling"
     "renewable", "storage", "grid", "power", "electricity",
     "Singapore", "Malaysia", "Philippines",
 ])
